@@ -1,1 +1,21 @@
-import{PrismaClient}from'@prisma/client';import*as bcrypt from'bcrypt';const p=new PrismaClient();async function main(){const email=process.env.ADMIN_EMAIL||'admin@echogpt.local';await p.user.upsert({where:{email},update:{},create:{email,name:'EchoGPT Admin',role:'ADMIN',passwordHash:await bcrypt.hash(process.env.ADMIN_PASSWORD||'ChangeMe123!',12),subscriptions:{create:{plan:'PREMIUM'}}}})}main().finally(()=>p.$disconnect());
+import { PrismaClient } from "@prisma/client";
+import * as bcrypt from "bcrypt";
+const p = new PrismaClient();
+async function main() {
+  const email = process.env.ADMIN_EMAIL || "admin@echogpt.local";
+  await p.user.upsert({
+    where: { email },
+    update: {},
+    create: {
+      email,
+      name: "EchoGPT Admin",
+      role: "ADMIN",
+      passwordHash: await bcrypt.hash(
+        process.env.ADMIN_PASSWORD || "ChangeMe123!",
+        12,
+      ),
+      subscriptions: { create: { plan: "PREMIUM" } },
+    },
+  });
+}
+main().finally(() => p.$disconnect());

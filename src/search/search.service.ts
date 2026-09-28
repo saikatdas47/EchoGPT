@@ -1,2 +1,63 @@
-import{Injectable}from'@nestjs/common';import{ConfigService}from'@nestjs/config';import{PrismaService}from'../prisma/prisma.service';import{SubscriptionsService}from'../subscriptions/subscriptions.service';
-@Injectable()export class SearchService{constructor(private prisma:PrismaService,private config:ConfigService,private subscriptions:SubscriptionsService){}async search(userId:string,query:string){await this.subscriptions.assertAvailable(userId);const cached=await this.prisma.webSearch.findFirst({where:{userId,query,createdAt:{gte:new Date(Date.now()-15*60*1000)}},orderBy:{createdAt:'desc'}});if(cached)return{cached:true,results:cached.results};const url=this.config.get<string>('SEARCH_API_URL'),key=this.config.get<string>('SEARCH_API_KEY');let results:any[]=[];if(url){const res=await fetch(`${url}?q=${encodeURIComponent(query)}`,{headers:key?{Authorization:`Bearer ${key}`}:{}});if(res.ok){const data:any=await res.json();results=data.results||data.items||[]}}await this.prisma.webSearch.create({data:{userId,query,results}});return{cached:false,results}}history(userId:string){return this.prisma.webSearch.findMany({where:{userId},orderBy:{createdAt:'desc'},take:50})}recent(userId:string){return this.prisma.webSearch.findMany({where:{userId},distinct:['query'],orderBy:{createdAt:'desc'},take:10,select:{query:true,createdAt:true}})}async suggestions(userId:string,q:string){const rows=await this.prisma.webSearch.findMany({where:{userId,query:{contains:q,mode:'insensitive'}},distinct:['query'],take:8,select:{query:true}});return rows.map(r=>r.query)}}
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { PrismaService } from "../prisma/prisma.service";
+import { SubscriptionsService } from "../subscriptions/subscriptions.service";
+@Injectable()
+export class SearchService {
+  constructor(
+    private prisma: PrismaService,
+    private config: ConfigService,
+    private subscriptions: SubscriptionsService,
+  ) {}
+  async search(userId: string, query: string) {
+    await this.subscriptions.assertAvailable(userId);
+    const cached = await this.prisma.webSearch.findFirst({
+      where: {
+        userId,
+        query,
+        createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (cached) return { cached: true, results: cached.results };
+    const url = this.config.get<string>("SEARCH_API_URL"),
+      key = this.config.get<string>("SEARCH_API_KEY");
+    let results: any[] = [];
+    if (url) {
+      const res = await fetch(`${url}?q=${encodeURIComponent(query)}`, {
+        headers: key ? { Authorization: `Bearer ${key}` } : {},
+      });
+      if (res.ok) {
+        const data: any = await res.json();
+        results = data.results || data.items || [];
+      }
+    }
+    await this.prisma.webSearch.create({ data: { userId, query, results } });
+    return { cached: false, results };
+  }
+  history(userId: string) {
+    return this.prisma.webSearch.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+  }
+  recent(userId: string) {
+    return this.prisma.webSearch.findMany({
+      where: { userId },
+      distinct: ["query"],
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: { query: true, createdAt: true },
+    });
+  }
+  async suggestions(userId: string, q: string) {
+    const rows = await this.prisma.webSearch.findMany({
+      where: { userId, query: { contains: q, mode: "insensitive" } },
+      distinct: ["query"],
+      take: 8,
+      select: { query: true },
+    });
+    return rows.map((r) => r.query);
+  }
+}
