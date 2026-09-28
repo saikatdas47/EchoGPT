@@ -41,8 +41,8 @@ Use separate base64 values for the two JWT secrets and the 64-character hex valu
 
 ## API
 
-- API base: `http://localhost:3000/api/v1`
-- Swagger UI: `http://localhost:3000/docs`
+- API base: `http://localhost:3100/api/v1`
+- Swagger UI: `http://localhost:3100/docs`
 - Health: `GET /api/v1/health`
 
 The Swagger UI documents request fields, authentication requirements and response schemas derived from the DTOs.

@@ -9,7 +9,7 @@ async function bootstrap() {
   app.setGlobalPrefix("api/v1");
   app.use(helmet());
   app.enableCors({
-    origin: (process.env.CORS_ORIGINS || "http://localhost:5173").split(","),
+    origin: (process.env.CORS_ORIGINS || "http://localhost:5174").split(","),
     credentials: true,
   });
   app.useGlobalPipes(
@@ -28,6 +28,6 @@ async function bootstrap() {
   SwaggerModule.setup("docs", app, SwaggerModule.createDocument(app, config), {
     swaggerOptions: { persistAuthorization: true },
   });
-  await app.listen(Number(process.env.PORT || 3000), "0.0.0.0");
+  await app.listen(Number(process.env.PORT || 3100), "0.0.0.0");
 }
 void bootstrap();
