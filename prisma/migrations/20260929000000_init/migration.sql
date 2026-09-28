@@ -1,0 +1,23 @@
+CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
+CREATE TYPE "Plan" AS ENUM ('FREE', 'PREMIUM');
+CREATE TYPE "SubscriptionStatus" AS ENUM ('ACTIVE', 'CANCELED', 'PAST_DUE');
+CREATE TYPE "ProviderType" AS ENUM ('OPENAI', 'ANTHROPIC', 'GEMINI');
+CREATE TYPE "MessageRole" AS ENUM ('USER', 'ASSISTANT', 'SYSTEM');
+
+CREATE TABLE "User" ("id" TEXT PRIMARY KEY,"email" TEXT NOT NULL UNIQUE,"passwordHash" TEXT NOT NULL,"name" TEXT,"role" "Role" NOT NULL DEFAULT 'USER',"emailVerified" BOOLEAN NOT NULL DEFAULT false,"isActive" BOOLEAN NOT NULL DEFAULT true,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL);
+CREATE TABLE "RefreshToken" ("id" TEXT PRIMARY KEY,"tokenHash" TEXT NOT NULL UNIQUE,"userId" TEXT NOT NULL,"expiresAt" TIMESTAMP(3) NOT NULL,"revokedAt" TIMESTAMP(3),"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE);
+CREATE TABLE "Subscription" ("id" TEXT PRIMARY KEY,"userId" TEXT NOT NULL,"plan" "Plan" NOT NULL DEFAULT 'FREE',"status" "SubscriptionStatus" NOT NULL DEFAULT 'ACTIVE',"startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"endsAt" TIMESTAMP(3),"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE);
+CREATE TABLE "AiProvider" ("id" TEXT PRIMARY KEY,"userId" TEXT NOT NULL,"name" TEXT NOT NULL,"type" "ProviderType" NOT NULL,"model" TEXT NOT NULL,"encryptedApiKey" TEXT NOT NULL,"isEnabled" BOOLEAN NOT NULL DEFAULT true,"isDefault" BOOLEAN NOT NULL DEFAULT false,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "AiProvider_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,CONSTRAINT "AiProvider_userId_name_key" UNIQUE("userId","name"));
+CREATE TABLE "Conversation" ("id" TEXT PRIMARY KEY,"userId" TEXT NOT NULL,"providerId" TEXT,"title" TEXT NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "Conversation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,CONSTRAINT "Conversation_providerId_fkey" FOREIGN KEY ("providerId") REFERENCES "AiProvider"("id") ON DELETE SET NULL);
+CREATE TABLE "ChatMessage" ("id" TEXT PRIMARY KEY,"conversationId" TEXT NOT NULL,"role" "MessageRole" NOT NULL,"content" TEXT NOT NULL,"promptTokens" INTEGER NOT NULL DEFAULT 0,"responseTokens" INTEGER NOT NULL DEFAULT 0,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "ChatMessage_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "Conversation"("id") ON DELETE CASCADE);
+CREATE TABLE "WebSearch" ("id" TEXT PRIMARY KEY,"userId" TEXT NOT NULL,"query" TEXT NOT NULL,"results" JSONB NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "WebSearch_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE);
+CREATE TABLE "ApiUsageLog" ("id" TEXT PRIMARY KEY,"userId" TEXT,"endpoint" TEXT NOT NULL,"method" TEXT NOT NULL,"statusCode" INTEGER NOT NULL,"responseTime" INTEGER NOT NULL,"tokens" INTEGER NOT NULL DEFAULT 0,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "ApiUsageLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL);
+CREATE INDEX "RefreshToken_userId_expiresAt_idx" ON "RefreshToken"("userId","expiresAt");
+CREATE INDEX "Subscription_userId_status_idx" ON "Subscription"("userId","status");
+CREATE INDEX "AiProvider_userId_isEnabled_idx" ON "AiProvider"("userId","isEnabled");
+CREATE INDEX "Conversation_userId_updatedAt_idx" ON "Conversation"("userId","updatedAt");
+CREATE INDEX "ChatMessage_conversationId_createdAt_idx" ON "ChatMessage"("conversationId","createdAt");
+CREATE INDEX "WebSearch_userId_createdAt_idx" ON "WebSearch"("userId","createdAt");
+CREATE INDEX "WebSearch_query_idx" ON "WebSearch"("query");
+CREATE INDEX "ApiUsageLog_userId_createdAt_idx" ON "ApiUsageLog"("userId","createdAt");
+CREATE INDEX "ApiUsageLog_endpoint_createdAt_idx" ON "ApiUsageLog"("endpoint","createdAt");

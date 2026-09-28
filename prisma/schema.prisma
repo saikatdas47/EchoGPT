@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+}
+
+enum ProviderType {
+  OPENAI
+  ANTHROPIC
+  GEMINI
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model User {
+  id               String          @id @default(cuid())
+  email            String          @unique
+  passwordHash     String
+  name             String?
+  role             Role            @default(USER)
+  emailVerified    Boolean         @default(false)
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  sessions         RefreshToken[]
+  subscriptions    Subscription[]
+  providers        AiProvider[]
+  conversations    Conversation[]
+  searches         WebSearch[]
+  usageLogs        ApiUsageLog[]
+}
+
+model RefreshToken {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  userId     String
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt])
+}
+
+model Subscription {
+  id        String             @id @default(cuid())
+  userId    String
+  plan      Plan               @default(FREE)
+  status    SubscriptionStatus @default(ACTIVE)
+  startedAt DateTime           @default(now())
+  endsAt    DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, status])
+}
+
+model AiProvider {
+  id              String       @id @default(cuid())
+  userId          String
+  name            String
+  type            ProviderType
+  model           String
+  encryptedApiKey String
+  isEnabled       Boolean      @default(true)
+  isDefault       Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations   Conversation[]
+  @@unique([userId, name])
+  @@index([userId, isEnabled])
+}
+
+model Conversation {
+  id         String        @id @default(cuid())
+  userId     String
+  providerId String?
+  title      String
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider   AiProvider?   @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  messages   ChatMessage[]
+  @@index([userId, updatedAt])
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String       @db.Text
+  promptTokens   Int          @default(0)
+  responseTokens Int          @default(0)
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  @@index([conversationId, createdAt])
+}
+
+model WebSearch {
+  id        String   @id @default(cuid())
+  userId    String
+  query     String
+  results   Json
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
+  @@index([query])
+}
+
+model ApiUsageLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  endpoint     String
+  method       String
+  statusCode   Int
+  responseTime Int
+  tokens       Int      @default(0)
+  createdAt    DateTime @default(now())
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  @@index([userId, createdAt])
+  @@index([endpoint, createdAt])
+}
