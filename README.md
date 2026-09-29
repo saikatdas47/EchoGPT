@@ -2,6 +2,70 @@
 
 Production-style backend for the EchoGPT browser extension, built with NestJS, PostgreSQL (Neon), Prisma ORM, JWT and Swagger.
 
+## Submission links
+
+- GitHub repository: add after the first push
+- Render deployment: add after the first successful deploy
+- Local Swagger: `http://localhost:3100/docs`
+
+## Assignment coverage
+
+| Area | Implementation |
+| --- | --- |
+| Authentication | Registration, login, bcrypt hashing, JWT access token, rotating hashed refresh tokens, logout |
+| Users | Profile, update, password change, account deletion, `USER`/`ADMIN` authorization |
+| Subscriptions | Free/Premium plans, status, plan change, monthly chat/search limits and remaining usage |
+| AI providers | OpenAI, Anthropic and Gemini CRUD, enable/disable, default selection and encrypted API keys |
+| Chat | Provider selection, prompt/response persistence, conversations and history |
+| Search | No-key basic search, history, recent queries, suggestions and 15-minute database cache |
+| Admin | Dashboard totals, user/subscription/provider lists, usage analytics and request logs |
+| Operations | Neon PostgreSQL, Prisma migration, health check, Docker, Swagger and Render Blueprint |
+
+Email verification and streaming are bonus requirements and are not included. Search uses DuckDuckGo Instant Answers as a zero-configuration fallback, not a commercial full web-search index. Provider health currently confirms usable configuration rather than sending a billable provider request.
+
+## Architecture
+
+```text
+Chrome Extension / Swagger / API Client
+                  |
+          HTTP REST request
+                  |
+       Guards + Validation Pipes
+                  |
+             Controller
+                  |
+               Service
+                  |
+             Prisma ORM
+                  |
+        Neon PostgreSQL database
+
+Chat Service --> OpenAI / Anthropic / Gemini
+```
+
+The request flow is `route -> JWT/role guard -> DTO validation -> controller -> service -> Prisma -> Neon -> response`. A global interceptor records endpoint, method, status and response time for analytics.
+
+## Project structure
+
+```text
+src/
+  auth/           JWT authentication and refresh-token rotation
+  users/          Profile and account management
+  subscriptions/  Plans and usage limits
+  providers/      Encrypted multi-provider configuration
+  chat/           AI requests and conversation history
+  search/         Search, history, suggestions and caching
+  admin/          Statistics, analytics and logs
+  common/         Guards, decorators and usage interceptor
+  health/         Application and database readiness
+  prisma/         Shared Prisma service
+prisma/
+  schema.prisma
+  migrations/
+test/
+  app.e2e-spec.ts
+```
+
 ## Features
 
 - Registration, login, rotating refresh tokens and secure logout
@@ -46,6 +110,19 @@ Use separate base64 values for the two JWT secrets and the 64-character hex valu
 - Health: `GET /api/v1/health`
 
 The Swagger UI documents request fields, authentication requirements and response schemas derived from the DTOs.
+
+### Endpoint groups
+
+| Prefix | Purpose |
+| --- | --- |
+| `/api/v1/auth` | Register, login, refresh and logout |
+| `/api/v1/users/me` | Current-user profile, password and account |
+| `/api/v1/subscriptions` | Plan, status and remaining usage |
+| `/api/v1/providers` | AI provider management |
+| `/api/v1/chat` | Prompts, conversations and history |
+| `/api/v1/search` | Search, history, recent and suggestions |
+| `/api/v1/admin` | Admin-only statistics and operational data |
+| `/api/v1/health` | Public application/database health |
 
 ## Database migrations
 
