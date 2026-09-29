@@ -52,6 +52,20 @@ model User {
   conversations Conversation[]
   searches      WebSearch[]
   usageLogs     ApiUsageLog[]
+  emailOtps     EmailVerificationOtp[]
+}
+
+model EmailVerificationOtp {
+  id        String    @id @default(cuid())
+  userId    String
+  otpHash   String
+  expiresAt DateTime
+  attempts  Int       @default(0)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
 
 model RefreshToken {

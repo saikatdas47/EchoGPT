@@ -2,6 +2,7 @@ import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import request = require("supertest");
 import { AppModule } from "../src/app.module";
+import { EmailService } from "../src/auth/email.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 
 jest.setTimeout(30_000);
@@ -10,11 +11,19 @@ describe("EchoGPT API (e2e)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let testEmail: string;
+  let deliveredOtp = "";
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(EmailService)
+      .useValue({
+        sendVerificationOtp: async (_email: string, otp: string) => {
+          deliveredOtp = otp;
+        },
+      })
+      .compile();
 
     app = module.createNestApplication();
     prisma = module.get(PrismaService);
@@ -61,10 +70,26 @@ describe("EchoGPT API (e2e)", () => {
     expect(registered.body.refreshToken).toBeDefined();
 
     await request(app.getHttpServer())
+      .post("/api/v1/auth/email/send-otp")
+      .send({ email })
+      .expect(200);
+
+    expect(deliveredOtp).toMatch(/^\d{6}$/);
+
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/email/verify")
+      .send({ email, otp: deliveredOtp })
+      .expect(200)
+      .expect(({ body }) => expect(body.verified).toBe(true));
+
+    await request(app.getHttpServer())
       .get("/api/v1/users/me")
       .set("Authorization", `Bearer ${registered.body.accessToken}`)
       .expect(200)
-      .expect(({ body }) => expect(body.email).toBe(email));
+      .expect(({ body }) => {
+        expect(body.email).toBe(email);
+        expect(body.emailVerified).toBe(true);
+      });
 
     const refreshed = await request(app.getHttpServer())
       .post("/api/v1/auth/refresh")

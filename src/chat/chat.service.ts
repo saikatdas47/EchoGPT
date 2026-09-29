@@ -17,8 +17,8 @@ export class ChatService {
     messages: any[],
   ) {
     let url = "",
-      headers: any = { "content-type": "application/json" },
       body: any;
+    const headers: any = { "content-type": "application/json" };
     if (type === "OPENAI") {
       url = "https://api.openai.com/v1/chat/completions";
       headers.authorization = `Bearer ${key}`;

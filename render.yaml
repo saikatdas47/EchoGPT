@@ -26,3 +26,17 @@ services:
         value: 7d
       - key: PROVIDER_ENCRYPTION_KEY
         sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_APP_PASSWORD
+        sync: false
+      - key: EMAIL_FROM_NAME
+        value: EchoGPT
+      - key: OTP_SECRET
+        generateValue: true
+      - key: OTP_EXPIRES_MINUTES
+        value: 5
+      - key: OTP_RESEND_SECONDS
+        value: 60
+      - key: OTP_MAX_ATTEMPTS
+        value: 5

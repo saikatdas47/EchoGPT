@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   Length,
+  Matches,
   MinLength,
 } from "class-validator";
 
@@ -25,4 +26,17 @@ export class LoginDto {
 }
 export class RefreshDto {
   @ApiProperty() @IsString() refreshToken: string;
+}
+
+export class EmailOtpRequestDto {
+  @ApiProperty({ example: "user@example.com" })
+  @IsEmail()
+  email: string;
+}
+
+export class EmailOtpVerifyDto extends EmailOtpRequestDto {
+  @ApiProperty({ example: "483921", description: "Six-digit code sent by email" })
+  @IsString()
+  @Matches(/^\d{6}$/, { message: "otp must be a six-digit code" })
+  otp: string;
 }

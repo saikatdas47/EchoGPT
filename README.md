@@ -4,15 +4,15 @@ Production-style backend for the EchoGPT browser extension, built with NestJS, P
 
 ## Submission links
 
-- GitHub repository: add after the first push
-- Render deployment: add after the first successful deploy
+- GitHub repository: https://github.com/saikatdas47/EchoGPT
+- Live Swagger API documentation: https://echogpt-f29g.onrender.com/docs
 - Local Swagger: `http://localhost:3100/docs`
 
 ## Assignment coverage
 
 | Area | Implementation |
 | --- | --- |
-| Authentication | Registration, login, bcrypt hashing, JWT access token, rotating hashed refresh tokens, logout |
+| Authentication | Registration, login, bcrypt hashing, JWT access token, rotating hashed refresh tokens, logout, email OTP verification |
 | Users | Profile, update, password change, account deletion, `USER`/`ADMIN` authorization |
 | Subscriptions | Free/Premium plans, status, plan change, monthly chat/search limits and remaining usage |
 | AI providers | OpenAI, Anthropic and Gemini CRUD, enable/disable, default selection and encrypted API keys |
@@ -21,7 +21,7 @@ Production-style backend for the EchoGPT browser extension, built with NestJS, P
 | Admin | Dashboard totals, user/subscription/provider lists, usage analytics and request logs |
 | Operations | Neon PostgreSQL, Prisma migration, health check, Docker, Swagger and Render Blueprint |
 
-Email verification and streaming are bonus requirements and are not included. Search uses DuckDuckGo Instant Answers as a zero-configuration fallback, not a commercial full web-search index. Provider health currently confirms usable configuration rather than sending a billable provider request.
+Email verification is included. Streaming remains the only bonus feature not implemented. Search uses DuckDuckGo Instant Answers as a zero-configuration fallback, not a commercial full web-search index. Provider health confirms usable configuration without sending a billable provider request.
 
 ## Architecture
 
@@ -49,7 +49,7 @@ The request flow is `route -> JWT/role guard -> DTO validation -> controller -> 
 
 ```text
 src/
-  auth/           JWT authentication and refresh-token rotation
+  auth/           JWT authentication, refresh-token rotation and email OTP
   users/          Profile and account management
   subscriptions/  Plans and usage limits
   providers/      Encrypted multi-provider configuration
@@ -69,6 +69,7 @@ test/
 ## Features
 
 - Registration, login, rotating refresh tokens and secure logout
+- Gmail OTP email verification with database-backed expiry, resend cooldown, attempt limit and single use
 - Profile updates, password changes and account deletion
 - Admin/user roles and guarded admin endpoints
 - Free/premium subscriptions with monthly request limits
@@ -103,6 +104,8 @@ openssl rand -hex 32
 
 Use separate base64 values for the two JWT secrets and the 64-character hex value for `PROVIDER_ENCRYPTION_KEY`.
 
+For email verification, use a Gmail account with 2-Step Verification enabled and create a Google App Password. Set `EMAIL_USER`, `EMAIL_APP_PASSWORD`, `EMAIL_FROM_NAME` and a separate random `OTP_SECRET` in `.env`. Never use the normal Gmail password and never commit real values.
+
 ## API
 
 - API base: `http://localhost:3100/api/v1`
@@ -115,7 +118,7 @@ The Swagger UI documents request fields, authentication requirements and respons
 
 | Prefix | Purpose |
 | --- | --- |
-| `/api/v1/auth` | Register, login, refresh and logout |
+| `/api/v1/auth` | Register, login, refresh, logout and email OTP verification |
 | `/api/v1/users/me` | Current-user profile, password and account |
 | `/api/v1/subscriptions` | Plan, status and remaining usage |
 | `/api/v1/providers` | AI provider management |
@@ -144,6 +147,16 @@ Never commit `.env`. The submitted `.env.example` contains placeholders only.
 
 Create a provider through `POST /api/v1/providers`. API keys are encrypted with AES-256-GCM before storage. Chat supports OpenAI, Anthropic and Gemini request formats. No provider secret is returned by the API.
 
+## Email verification flow
+
+1. Register with `POST /api/v1/auth/register`.
+2. Send a code with `POST /api/v1/auth/email/send-otp` and `{ "email": "user@example.com" }`.
+3. Read the six-digit code from the email.
+4. Verify with `POST /api/v1/auth/email/verify` and `{ "email": "user@example.com", "otp": "483921" }`.
+5. If necessary, request another code through `POST /api/v1/auth/email/resend-otp` after the cooldown.
+
+Only an HMAC-SHA256 hash is stored in PostgreSQL. Codes expire after five minutes by default, become invalid after five wrong attempts, are single-use, and a new code invalidates older active codes. Send responses are deliberately generic so the endpoint does not reveal whether an account exists.
+
 ## Web search
 
 Basic search uses DuckDuckGo Instant Answers and needs no API key. It is intentionally a lightweight, zero-configuration fallback rather than a full commercial web-search index. Search history, recent queries, suggestions and 15-minute database caching are included.
@@ -157,7 +170,7 @@ npm run test:e2e
 npx prisma validate
 ```
 
-The E2E suite uses the configured database, creates a unique temporary user, verifies health, registration, JWT-protected profile access and refresh-token rotation, and deletes the test user before completing.
+The E2E suite uses the configured database, creates a unique temporary user, verifies health, registration, the complete OTP lifecycle through a mocked mail transport, JWT-protected profile access and refresh-token rotation, and deletes the test user before completing. The mock prevents automated tests from sending real email; Gmail SMTP credentials must be verified separately in the deployment environment.
 
 ## Deploy to Render
 
@@ -168,6 +181,8 @@ The included `render.yaml` defines a free Node.js web service. Push the reposito
 - `JWT_ACCESS_SECRET`
 - `JWT_REFRESH_SECRET`
 - `PROVIDER_ENCRYPTION_KEY`
+- `EMAIL_USER`
+- `EMAIL_APP_PASSWORD`
 
 Render installs dependencies, generates Prisma Client, builds NestJS, applies pending migrations at startup, and launches the production server. Its health-check path is `/api/v1/health`. Render supplies the runtime `PORT`, so do not hardcode production port `3100` in the dashboard.
 
@@ -175,6 +190,7 @@ Render installs dependencies, generates Prisma Client, builds NestJS, applies pe
 
 - Passwords use bcrypt with 12 rounds.
 - Refresh tokens are stored only as SHA-256 hashes and rotated on use.
+- Email OTPs are HMAC-hashed, time-limited, single-use and attempt-limited.
 - Provider keys are encrypted at rest.
 - DTO validation rejects unknown input fields.
 - Authorization checks scope user-owned resources by `userId`.
