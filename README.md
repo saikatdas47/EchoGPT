@@ -76,8 +76,23 @@ Basic search uses DuckDuckGo Instant Answers and needs no API key. It is intenti
 ```bash
 npm run build
 npm test
+npm run test:e2e
 npx prisma validate
 ```
+
+The E2E suite uses the configured database, creates a unique temporary user, verifies health, registration, JWT-protected profile access and refresh-token rotation, and deletes the test user before completing.
+
+## Deploy to Render
+
+The included `render.yaml` defines a free Node.js web service. Push the repository to GitHub, choose **New > Blueprint** in Render, and select the repository. Add the secret values requested by Render:
+
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- `PROVIDER_ENCRYPTION_KEY`
+
+Render installs dependencies, generates Prisma Client, builds NestJS, applies pending migrations at startup, and launches the production server. Its health-check path is `/api/v1/health`. Render supplies the runtime `PORT`, so do not hardcode production port `3100` in the dashboard.
 
 ## Security notes
 
