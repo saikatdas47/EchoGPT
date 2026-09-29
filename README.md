@@ -69,7 +69,7 @@ Create a provider through `POST /api/v1/providers`. API keys are encrypted with 
 
 ## Web search
 
-Set `SEARCH_API_URL` and optionally `SEARCH_API_KEY` for the chosen search service. Without this configuration, the endpoint returns an empty result set while still supporting history, recent queries and suggestions.
+Basic search uses DuckDuckGo Instant Answers and needs no API key. It is intentionally a lightweight, zero-configuration fallback rather than a full commercial web-search index. Search history, recent queries, suggestions and 15-minute database caching are included.
 
 ## Verification
 
@@ -86,4 +86,4 @@ npx prisma validate
 - Provider keys are encrypted at rest.
 - DTO validation rejects unknown input fields.
 - Authorization checks scope user-owned resources by `userId`.
-- Helmet and explicit CORS origins are enabled.
+- Helmet is enabled. Localhost and the assignment's EchoGPT extension origin are accepted automatically, so an extension ID is not required in `.env` during development.

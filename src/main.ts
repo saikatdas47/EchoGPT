@@ -5,11 +5,22 @@ import helmet from "helmet";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
+  const echoGptExtensionOrigin =
+    "chrome-extension://negimdcamohmoheiifgecbjgjepkcfhj";
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix("api/v1");
   app.use(helmet());
   app.enableCors({
-    origin: (process.env.CORS_ORIGINS || "http://localhost:5174").split(","),
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
+      const allowed =
+        !origin ||
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+        origin === echoGptExtensionOrigin;
+      callback(allowed ? null : new Error("Origin is not allowed"), allowed);
+    },
     credentials: true,
   });
   app.useGlobalPipes(
