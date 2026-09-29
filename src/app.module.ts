@@ -11,6 +11,7 @@ import { SearchModule } from "./search/search.module";
 import { AdminModule } from "./admin/admin.module";
 import { HealthModule } from "./health/health.module";
 import { UsageInterceptor } from "./common/usage.interceptor";
+import { AppController } from "./app.controller";
 
 @Module({
   imports: [
@@ -26,5 +27,6 @@ import { UsageInterceptor } from "./common/usage.interceptor";
     HealthModule,
   ],
   providers: [{ provide: APP_INTERCEPTOR, useClass: UsageInterceptor }],
+  controllers: [AppController],
 })
 export class AppModule {}
