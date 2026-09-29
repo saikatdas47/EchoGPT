@@ -1,5 +1,6 @@
-import { Controller, Get } from "@nestjs/common";
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Controller, Get, Res } from "@nestjs/common";
+import { ApiExcludeEndpoint, ApiTags } from "@nestjs/swagger";
+import { Response } from "express";
 import { Public } from "./common/public.decorator";
 
 @ApiTags("API")
@@ -7,14 +8,8 @@ import { Public } from "./common/public.decorator";
 export class AppController {
   @Public()
   @Get()
-  @ApiOperation({ summary: "Get API information" })
-  info() {
-    return {
-      name: "EchoGPT Backend API",
-      status: "running",
-      version: "1.0.0",
-      documentation: "/docs",
-      health: "/api/v1/health",
-    };
+  @ApiExcludeEndpoint()
+  home(@Res() response: Response) {
+    return response.redirect("/docs");
   }
 }

@@ -1,6 +1,7 @@
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { Request, Response } from "express";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 
@@ -8,6 +9,11 @@ async function bootstrap() {
   const echoGptExtensionOrigin =
     "chrome-extension://negimdcamohmoheiifgecbjgjepkcfhj";
   const app = await NestFactory.create(AppModule);
+  app
+    .getHttpAdapter()
+    .get("/", (_request: Request, response: Response) =>
+      response.redirect("/docs"),
+    );
   app.setGlobalPrefix("api/v1");
   app.use(helmet());
   app.enableCors({
