@@ -14,23 +14,21 @@ export class UsageInterceptor implements NestInterceptor {
     const started = Date.now();
     const req = context.switchToHttp().getRequest();
     const res = context.switchToHttp().getResponse();
-    return next
-      .handle()
-      .pipe(
-        tap({
-          finalize: () =>
-            void this.prisma.apiUsageLog
-              .create({
-                data: {
-                  userId: req.user?.id,
-                  endpoint: req.route?.path || req.path,
-                  method: req.method,
-                  statusCode: res.statusCode,
-                  responseTime: Date.now() - started,
-                },
-              })
-              .catch(() => undefined),
-        }),
-      );
+    return next.handle().pipe(
+      tap({
+        finalize: () =>
+          void this.prisma.apiUsageLog
+            .create({
+              data: {
+                userId: req.user?.id,
+                endpoint: (req.originalUrl || req.path).split("?")[0],
+                method: req.method,
+                statusCode: res.statusCode,
+                responseTime: Date.now() - started,
+              },
+            })
+            .catch(() => undefined),
+      }),
+    );
   }
 }

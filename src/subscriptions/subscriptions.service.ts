@@ -13,6 +13,10 @@ export class SubscriptionsService {
     const used = await this.prisma.apiUsageLog.count({
       where: {
         userId,
+        OR: [
+          { endpoint: { startsWith: "/api/v1/chat" } },
+          { endpoint: { startsWith: "/api/v1/search" } },
+        ],
         createdAt: {
           gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
         },
